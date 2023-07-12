@@ -1,0 +1,246 @@
+/* 
+OP_BOOL	
+	:	'e' | 'ou' 	;
+//OP_COMPR: 'e' | 'ou' 'nao' | '&'; 
+
+TIPO:'literal' | 'inteiro' | 'real' | 'logico' ;
+
+//Define palavras chaves proprias da gramatica para serem usadas
+ESCREVA:'escreva';
+
+lEIA:'leia';
+
+DECLARE:'declare';
+
+OP_ATRI:'<-';
+
+INICIO:'algoritmo';
+
+FIM:'fim-algoritmo';
+
+PALAVRA_CHAVE: 'constante' | 'tipo' | '^' | 'verdadeiro' | 'falso' | 'registro' | 'fim_registro' 
+    | 'procedimento' | 'fim_procedimento' | '..' | 'funcao' | 'fim_funcao' 
+    | 'var' | 'se' | 'entao' | 'senao' | 'fim_se' 
+    | 'caso' | 'seja' | 'fim_cas    o' | 'para' | 'ate' | 'faca' 
+    | 'fim_para' | 'enquanto' | 'fim_enquanto' | 'retorne' | '%' | '.';
+
+//Define quais identificadores(variaveis) devem começa com letra e aceitam numeros e _
+IDENT : ('a'..'z'|'A'..'Z') ('a'..'z'|'A'..'Z'|'0'..'9' | '_')*; 
+
+//Indica uma cadeia, na qual deve comecar com aspas duplas e terminar com aspas duplas
+CADEIA: ('"') (ESC_SEQ | ~('\n' | '\\'|'"'))* ( '"'); 
+fragment
+ESC_SEQ:    '\\"'; //Barras e aspas duplas
+
+WS: (' '|'\t'|'\r'|'\n') { skip(); };
+    // \n pula para a proxima linha 
+    // \r move o cursor para o comeco da linha
+    // \t insere um tab
+
+//Tokens para operacoes relacionais
+OP_REL	:	'>' | '>=' | '<' | '<=' | '<>' | '='  ; 
+
+//Tokens para operacoes aritmeticas
+OP_ARIT1
+	:	'+' | '-'
+	;
+
+OP_ARIT2
+	:	'*' | '/'
+	;
+DELIM:	':' ; 
+
+//Abre e fecha parenteses, respectivamente
+ABREPA:	'('; 
+
+FECHAPA: ')'; 
+
+//Virgula 
+VIR : ','; 
+
+//Abre e fecha colchetes, respectivamente
+ABRECO: '['; 
+FECHACO: ']';
+
+//Numeros sem virgula, ou seja, inteiros
+NUM_INT:    DIGITO+; 
+
+//Numeros com virgula, ou seja, reais
+NUM_REAL:   DIGITO+ '.' DIGITO+; 
+
+DIGITO:'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+
+//O comentario deve ter em seu inicio um { e em seu fim um } 
+COMENTARIO: '{' ~('}' | '\n' | '\r')*  '}' { skip(); }; //E nao deve ter quebras de linha
+
+//trata do erro em que uma cadeia é aberta com ",mas não é fechada
+CADEIA_LITERAL_NAO_FECHADA:  ('"') (ESC_SEQ | ~('\n'|'\\'|'"'))* '\n';
+           
+//trata do erro em que um comentario é aberto com {,mas não é fechado
+COMENTARIO_NAO_FECHADO: '{' ~('}' | '\n' | '\r')* ('\r' | '\n'); 
+ERRO: .; //todo outro tipo de erro
+programa:
+    declaracoes 'algoritmo' corpo 'fim_algoritmo';
+
+declaracoes:
+    decl_local_global*;
+
+decl_local_global:
+    declaracao_local    |   declaracao_global;
+
+declaracao_local:
+    'declare' variavel
+    |
+    'constante' IDENT ':' tipo_basico '=' valor_constante
+    |
+    'tipo' IDENT ':' tipo
+    ;
+
+variavel:
+    identificador (',' identificador)* ':' tipo;
+
+identificador:
+    IDENT ('.' IDENT)* dimensao;
+
+dimensao: 
+    ('[' exp_aritmetica ']')*;
+
+tipo:
+    registro    |   tipo_estendido;
+
+tipo_basico:
+    'literal'   |   'inteiro'   |   'real'  |   'logico';
+
+tipo_basico_ident:
+    tipo_basico |   IDENT;
+
+tipo_estendido:
+    ('^')? tipo_basico_ident;
+
+valor_constante:
+    CADEIA  |   NUM_INT |   NUM_REAL    |   'verdadeiro'    |   'falso';
+
+registro:
+    'registro' (variavel)* 'fim_registro';
+
+declaracao_global:
+    'procedimento' IDENT '(' (parametros)? ')' declaracao_local* cmd* 'fim_procedimento' 
+    |
+    'funcao' IDENT '(' (parametros)? ')' ':' tipo_estendido declaracao_local* cmd* 'fim_funcao'
+    ;
+parametro:
+    'var'? identificador (',' identificador)* ':' tipo_estendido;
+
+parametros:
+    parametro (',' parametro)*;
+
+corpo:
+    declaracao_local* cmd*;
+
+cmd:
+    cmdLeia |   cmdEscreva  |   cmdSe   |   cmdCaso |   cmdPara |   cmdEnquanto |   cmdFaca |   cmdAtribuicao   |   cmdChamada  |   cmdRetorne;
+
+cmdLeia:
+    'leia' '(' '^'? identificador (',' '^'? identificador)* ')';
+
+cmdEscreva:
+    'escreva' '(' expressao (',' expressao)* ')';
+
+cmdSe:
+    'se'  expressao 'entao' (cmdIf+=cmd)* ('senao' (cmdElse+=cmd)*)? 'fim_se';
+
+cmdCaso:
+    'caso' exp_aritmetica 'seja' selecao ('senao' cmd*)? 'fim_caso';
+
+cmdPara:
+    'para' IDENT '<-' exp_aritmetica 'ate' exp_aritmetica 'faca' cmd* 'fim_para';
+
+cmdEnquanto:
+    'enquanto' expressao 'faca' cmd* 'fim_enquanto';
+
+cmdFaca:
+    'faca' (cmd)* 'ate' expressao;
+
+cmdAtribuicao:
+    '^'? identificador '<-' expressao;
+
+cmdChamada:
+    IDENT '(' expressao (',' expressao)* ')';
+
+cmdRetorne:
+    'retorne' expressao;
+
+selecao:
+    item_selecao*;
+
+item_selecao:
+    constantes ':' cmd*;
+
+constantes:
+    numero_intervalo (',' numero_intervalo)*;
+
+numero_intervalo:
+    (op_unarioPrimeiro=op_unario)? numeroPrimeiro=NUM_INT ('..' (op_unariosSegundo=op_unario)? numeroSegundo=NUM_INT)?;
+
+op_unario:
+    '-';
+
+exp_aritmetica:
+    termo (op1 termo)*;
+
+termo:
+    fator (op2 fator)*;
+
+fator:
+    parcela (op3 parcela)*;
+
+op1: 
+    '+' |   '-';
+
+op2:
+    '*' |   '/';
+
+op3:
+    '%';
+
+parcela:
+    op_unario? parcela_unario   |   parcela_nao_unario;
+
+parcela_unario:
+    '^'? identificador                       
+    |
+    IDENT '(' expressao (',' expressao)* ')' 
+    |
+    NUM_INT                                  
+    |
+    NUM_REAL                                 
+    |
+    '(' expressao ')'
+    ;
+
+parcela_nao_unario:
+    '&' identificador   | CADEIA;
+
+exp_relacional:
+    exp_aritmetica (op_relacional exp_aritmetica)?;
+
+op_relacional:
+    '=' |   '<>'    |   '>='    |   '<='    |   '>' |   '<';
+
+expressao:
+    termo_logico (op_logico_1 termo_logico)*;
+
+termo_logico:
+    fator_logico (op_logico_2 fator_logico)*;
+
+fator_logico:
+    'nao'? parcela_logica;
+
+parcela_logica:
+    ('verdadeiro' | 'falso')    |   exp_relacional;
+
+op_logico_1:
+    'ou';
+
+op_logico_2:
+    'e'; */
