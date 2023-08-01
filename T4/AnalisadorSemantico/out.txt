@@ -1,0 +1,1 @@
+java -jar C:\comp2\compiladores-corretor-automatico-1.0-SNAPSHOT-jar-with-dependencies.jar "java -jar C:\compiladoresOrganizados\alguma-semantico\target\analisador-semantico-1.0-SNAPSHOT-jar-with-dependencies.jar"  gcc C:\comp2\temp C:\comp2\casos-de-teste "790951, 790984, 790870" t4
